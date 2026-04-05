@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       .get();
 
     console.log('Orders snapshot size:', ordersSnapshot.docs.length);
-    const orders = ordersSnapshot.docs.map(doc => ({
+    const orders = ordersSnapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data()
     }));
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     // Get all menu items for inventory backup
     const menuSnapshot = await adminDb.collection('menu').get();
     console.log('Menu snapshot size:', menuSnapshot.docs.length);
-    const menuItems = menuSnapshot.docs.map(doc => ({
+    const menuItems = menuSnapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data()
     }));
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     // Get all users for user backup
     const usersSnapshot = await adminDb.collection('users').get();
     console.log('Users snapshot size:', usersSnapshot.docs.length);
-    const users = usersSnapshot.docs.map(doc => ({
+    const users = usersSnapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data()
     }));
@@ -75,8 +75,8 @@ export async function POST(request: Request) {
       dateRange: { startDate, endDate },
       summary: {
         totalOrders: orders.length,
-        totalRevenue: orders.reduce((sum, order) => sum + ((order as any).total || 0), 0),
-        totalProfit: orders.reduce((sum, order) => sum + ((order as any).profit || 0), 0)
+        totalRevenue: orders.reduce((sum: number, order: any) => sum + ((order as any).total || 0), 0),
+        totalProfit: orders.reduce((sum: number, order: any) => sum + ((order as any).profit || 0), 0)
       },
       data: {
         orders,
