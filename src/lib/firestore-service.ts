@@ -147,8 +147,14 @@ export const createOrder = async (orderData: Omit<Order, 'id' | 'createdAt'>) =>
 
       const orderRef = doc(collection(db, ORDERS_COLLECTION));
       const user = auth.currentUser;
+      
+      // Sanitize order data - remove undefined values to prevent Firestore errors
+      const sanitizedOrderData = Object.fromEntries(
+        Object.entries(orderData).filter(([_, value]) => value !== undefined)
+      );
+      
       const order = {
-        ...orderData,
+        ...sanitizedOrderData,
         createdAt: serverTimestamp(),
         status: 'pending',
         cashierName: user?.displayName || user?.email || "Anonymous"

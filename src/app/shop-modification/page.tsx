@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Save, RefreshCw, Store, Palette, Phone, Home, ShoppingCart, Loader2, Megaphone, Filter, MessageCircle, Bell, CreditCard } from "lucide-react";
+import { ArrowLeft, Save, RefreshCw, Store, Palette, Phone, Home, ShoppingCart, Loader2, Megaphone, Filter, MessageCircle, Bell, CreditCard, Upload, X, ImageIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ShopConfig, getShopConfig, saveShopConfig, resetShopConfig } from "@/lib/shop-config-service";
@@ -17,6 +17,67 @@ export default function ShopModificationPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("brand");
+  const [uploading, setUploading] = useState<string | null>(null);
+
+  // Upload file to Cloudinary
+  const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", folder);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      return data.url;
+    } catch (error: any) {
+      toast.error(error.message || "Failed to upload file");
+      return null;
+    }
+  };
+
+  // Handle file input change
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    folder: string,
+    onSuccess: (url: string) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only PNG, JPG, GIF, and WebP files are allowed");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      return;
+    }
+
+    setUploading(folder);
+    const url = await uploadFile(file, folder);
+    setUploading(null);
+
+    if (url) {
+      onSuccess(url);
+      toast.success("File uploaded successfully!");
+    }
+
+    // Reset input
+    e.target.value = "";
+  };
 
   // Load config from Firebase on mount
   useEffect(() => {
@@ -221,13 +282,37 @@ export default function ShopModificationPage() {
                         placeholder="🏪"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Image Path</Label>
-                      <Input 
-                        value={config.brand.logo.image || ""}
-                        onChange={(e) => updateBrand("logo", { ...config.brand.logo, image: e.target.value || null })}
-                        placeholder="/logo.png"
-                      />
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Logo Image</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          value={config.brand.logo.image || ""}
+                          onChange={(e) => updateBrand("logo", { ...config.brand.logo, image: e.target.value || null })}
+                          placeholder="Logo image URL"
+                          className="flex-1"
+                        />
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.gif,.webp"
+                            onChange={(e) => handleFileChange(e, "pos-logos", (url) => updateBrand("logo", { ...config.brand.logo, image: url }))}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            disabled={uploading === "pos-logos"}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={uploading === "pos-logos"}
+                          >
+                            {uploading === "pos-logos" ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Upload className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500">Upload PNG, JPG, GIF, or WebP (max 5MB)</p>
                     </div>
                     <div className="space-y-2">
                       <Label>Initials</Label>
@@ -564,19 +649,48 @@ export default function ShopModificationPage() {
                   <Label htmlFor="gcashEnabled">Enable GCash Payment</Label>
                 </div>
                 <div className="space-y-2">
-                  <Label>QR Code Image URL</Label>
-                  <Input 
-                    value={config.payment.gcash.qrCodeUrl || ""}
-                    onChange={(e) => setConfig(prev => prev ? {
-                      ...prev,
-                      payment: { 
-                        ...prev.payment, 
-                        gcash: { ...prev.payment.gcash, qrCodeUrl: e.target.value || null }
-                      }
-                    } : null)}
-                    placeholder="https://your-cdn.com/gcash-qr.png"
-                  />
-                  <p className="text-xs text-gray-500">Upload your GCash QR code image and paste the URL here</p>
+                  <Label>QR Code Image</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={config.payment.gcash.qrCodeUrl || ""}
+                      onChange={(e) => setConfig(prev => prev ? {
+                        ...prev,
+                        payment: { 
+                          ...prev.payment, 
+                          gcash: { ...prev.payment.gcash, qrCodeUrl: e.target.value || null }
+                        }
+                      } : null)}
+                      placeholder="https://your-cdn.com/gcash-qr.png"
+                      className="flex-1"
+                    />
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.gif,.webp"
+                        onChange={(e) => handleFileChange(e, "pos-qr-codes", (url) => setConfig(prev => prev ? {
+                          ...prev,
+                          payment: { 
+                            ...prev.payment, 
+                            gcash: { ...prev.payment.gcash, qrCodeUrl: url }
+                          }
+                        } : null))}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        disabled={uploading === "pos-qr-codes"}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={uploading === "pos-qr-codes"}
+                      >
+                        {uploading === "pos-qr-codes" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">Upload PNG, JPG, GIF, or WebP (max 5MB)</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Account Name</Label>
@@ -658,19 +772,48 @@ export default function ShopModificationPage() {
                   <Label htmlFor="paymayaEnabled">Enable PayMaya Payment</Label>
                 </div>
                 <div className="space-y-2">
-                  <Label>QR Code Image URL</Label>
-                  <Input 
-                    value={config.payment.paymaya.qrCodeUrl || ""}
-                    onChange={(e) => setConfig(prev => prev ? {
-                      ...prev,
-                      payment: { 
-                        ...prev.payment, 
-                        paymaya: { ...prev.payment.paymaya, qrCodeUrl: e.target.value || null }
-                      }
-                    } : null)}
-                    placeholder="https://your-cdn.com/paymaya-qr.png"
-                  />
-                  <p className="text-xs text-gray-500">Upload your PayMaya QR code image and paste the URL here</p>
+                  <Label>QR Code Image</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={config.payment.paymaya.qrCodeUrl || ""}
+                      onChange={(e) => setConfig(prev => prev ? {
+                        ...prev,
+                        payment: { 
+                          ...prev.payment, 
+                          paymaya: { ...prev.payment.paymaya, qrCodeUrl: e.target.value || null }
+                        }
+                      } : null)}
+                      placeholder="https://your-cdn.com/paymaya-qr.png"
+                      className="flex-1"
+                    />
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.gif,.webp"
+                        onChange={(e) => handleFileChange(e, "pos-qr-codes", (url) => setConfig(prev => prev ? {
+                          ...prev,
+                          payment: { 
+                            ...prev.payment, 
+                            paymaya: { ...prev.payment.paymaya, qrCodeUrl: url }
+                          }
+                        } : null))}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        disabled={uploading === "pos-qr-codes-paymaya"}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={uploading === "pos-qr-codes-paymaya"}
+                      >
+                        {uploading === "pos-qr-codes-paymaya" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500">Upload PNG, JPG, GIF, or WebP (max 5MB)</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Account Name</Label>

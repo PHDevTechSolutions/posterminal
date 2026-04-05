@@ -86,7 +86,7 @@ export default function CartPage() {
         tax,
         discount,
         discountType: appliedPromo ? "promo" : "none",
-        promoCode: appliedPromo?.code,
+        promoCode: appliedPromo?.code || null,
         total,
         totalCost: cart.reduce((acc, item) => acc + (item.cost || 0) * item.quantity, 0),
         profit: total - cart.reduce((acc, item) => acc + (item.cost || 0) * item.quantity, 0),
@@ -97,8 +97,8 @@ export default function CartPage() {
         cashierName: "Online Order",
         customerName: customerInfo.name,
         customerPhone: customerInfo.phone,
-        customerEmail: customerInfo.email,
-        customerAddress: customerInfo.address,
+        customerEmail: customerInfo.email || null,
+        customerAddress: customerInfo.address || null,
         source: "online",
       } as any);
 
@@ -353,9 +353,9 @@ export default function CartPage() {
                   )}
 
                   {/* Payment Method Selection */}
-                  {cartConfig.checkout.paymentMethods.show && (
+                  {cartConfig.checkout.paymentMethods?.show && (
                     <div>
-                      <Label>{cartConfig.checkout.paymentMethods.label}</Label>
+                      <Label>{cartConfig.checkout.paymentMethods?.label || "Payment Method"}</Label>
                       <div className="space-y-3 mt-2">
                         {/* GCash */}
                         {payment.gcash.enabled && (

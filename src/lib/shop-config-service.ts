@@ -338,6 +338,26 @@ export interface ShopConfig {
 }
 
 /**
+ * Deep merge utility - merges nested objects instead of overwriting
+ */
+function deepMerge(target: any, source: any): any {
+  if (!source) return target;
+  if (!target) return source;
+  
+  const output = { ...target };
+  
+  for (const key in source) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      output[key] = deepMerge(target[key] || {}, source[key]);
+    } else {
+      output[key] = source[key];
+    }
+  }
+  
+  return output;
+}
+
+/**
  * Get shop configuration from Firestore
  * Returns default config if none exists in Firestore
  */
@@ -347,8 +367,8 @@ export async function getShopConfig(): Promise<ShopConfig> {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      // Merge with default config to ensure all fields exist
-      return { ...defaultConfig, ...docSnap.data() } as ShopConfig;
+      // Deep merge with default config to ensure all nested fields exist
+      return deepMerge(defaultConfig, docSnap.data()) as ShopConfig;
     }
 
     // If no config exists, save default config to Firestore
