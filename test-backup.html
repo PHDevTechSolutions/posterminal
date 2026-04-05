@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backup Test</title>
+</head>
+<body>
+    <h1>Backup API Test</h1>
+    <button onclick="testDailyBackup()">Test Daily Backup</button>
+    <button onclick="testWeeklyBackup()">Test Weekly Backup</button>
+    <button onclick="testMonthlyBackup()">Test Monthly Backup</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function testDailyBackup() {
+            try {
+                const response = await fetch('/api/backup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'daily',
+                        startDate: new Date().toISOString(),
+                        endDate: new Date().toISOString()
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = `
+                    <h3>Daily Backup Result:</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <h3>Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+        
+        async function testWeeklyBackup() {
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 7);
+            
+            try {
+                const response = await fetch('/api/backup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'weekly',
+                        startDate: startDate.toISOString(),
+                        endDate: new Date().toISOString()
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = `
+                    <h3>Weekly Backup Result:</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <h3>Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+        
+        async function testMonthlyBackup() {
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 1);
+            
+            try {
+                const response = await fetch('/api/backup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'monthly',
+                        startDate: startDate.toISOString(),
+                        endDate: new Date().toISOString()
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = `
+                    <h3>Monthly Backup Result:</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <h3>Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
