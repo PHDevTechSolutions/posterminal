@@ -1,6 +1,9 @@
 // Test Firebase Admin connection
 import { adminDb } from '@/lib/firebase-admin';
 
+// Force dynamic to prevent static generation issues with firebase-admin
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // Test basic Firestore connection

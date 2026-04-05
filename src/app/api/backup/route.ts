@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
+
+// Force dynamic to prevent static generation issues with firebase-admin
+export const dynamic = 'force-dynamic';
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 

@@ -2,6 +2,9 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 
+// Force dynamic to prevent static generation issues with firebase-admin
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     console.log('=== BACKUP TEST START ===');

@@ -2,6 +2,23 @@ import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
 
+// Force dynamic to prevent static generation issues with firebase-admin
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  try {
+    const usersSnapshot = await adminDb.collection('users').get();
+    const users = usersSnapshot.docs.map(doc => ({
+      uid: doc.id,
+      ...doc.data()
+    }));
+    return NextResponse.json({ success: true, users });
+  } catch (error: any) {
+    console.error('API Error (Get Users):', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { email, password, displayName, role } = await request.json();
