@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const usersSnapshot = await adminDb.collection('users').get();
-    const users = usersSnapshot.docs.map(doc => ({
+    const users = usersSnapshot.docs.map((doc: any) => ({
       uid: doc.id,
       ...doc.data()
     }));
