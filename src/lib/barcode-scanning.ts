@@ -172,6 +172,11 @@ class BarcodeScanningService {
     return Array.from(this.barcodeMap.values());
   }
 
+  // Delete barcode
+  deleteBarcode(barcode: string): boolean {
+    return this.barcodeMap.delete(barcode);
+  }
+
   // Export barcodes
   exportBarcodes(): string {
     const data = this.getAllBarcodes();

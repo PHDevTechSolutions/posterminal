@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Plus, 
   Minus, 
@@ -63,6 +63,7 @@ const DUMMY_MENU: MenuItem[] = [
 ];
 
 const CATEGORIES = ["All", "Grains", "Grocery", "Drinks", "Household"];
+const ITEMS_PER_PAGE = 12;
 
 export default function POSPage() {
   const { user, profile, loading: authLoading, logout } = useAuth();
@@ -72,6 +73,7 @@ export default function POSPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isOrderMode, setIsOrderMode] = useState(false);
@@ -173,11 +175,26 @@ export default function POSPage() {
     doc.save(`receipt-${orderId}.pdf`);
   };
 
-  const filteredItems = menuItems.filter(item => {
-    const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Filter and paginate items
+  const filteredItems = useMemo(() => {
+    return menuItems.filter(item => {
+      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [menuItems, selectedCategory, searchQuery]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredItems.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredItems, currentPage]);
+
+  // Reset to page 1 when category or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery]);
 
   const addToCart = (item: MenuItem) => {
     if (item.stock <= 0) {
@@ -725,40 +742,72 @@ export default function POSPage() {
                 <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredItems.map((item) => (
-                  <Card 
-                    key={item.id} 
-                    className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
-                    onClick={() => addToCart(item)}
-                  >
-                    <CardContent className="p-0">
-                      <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                        {item.image ? (
-                          <img 
-                            src={item.image} 
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Package className="h-8 w-8 text-gray-300" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-medium text-sm text-gray-900 line-clamp-1">{item.name}</h3>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="font-semibold">₱{item.price}</span>
-                          <Badge variant={item.stock > 10 ? "secondary" : "destructive"} className="text-xs">
-                            {item.stock}
-                          </Badge>
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {paginatedItems.map((item) => (
+                    <Card 
+                      key={item.id} 
+                      className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
+                      onClick={() => addToCart(item)}
+                    >
+                      <CardContent className="p-0">
+                        <div className="aspect-square bg-gray-100 relative overflow-hidden">
+                          {item.image ? (
+                            <img 
+                              src={item.image} 
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="h-8 w-8 text-gray-300" />
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                        <div className="p-4">
+                          <h3 className="font-medium text-sm text-gray-900 line-clamp-1">{item.name}</h3>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="font-semibold">₱{item.price}</span>
+                            <Badge variant={item.stock > 10 ? "secondary" : "destructive"} className="text-xs">
+                              {item.stock}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                    <p className="text-sm text-gray-500">
+                      Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of {filteredItems.length} products
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-sm text-gray-600">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </main>

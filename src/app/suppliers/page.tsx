@@ -1,16 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ArrowLeft, Truck, Plus, Package, Phone, Mail, MapPin, Star, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowLeft, Truck, Plus, Phone, Mail, MapPin, Star, Loader2, Search, ChevronLeft, ChevronRight, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { supplierManagement, Supplier, PurchaseOrder } from "@/lib/supplier-management";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+const ITEMS_PER_PAGE = 10;
 
 export default function SupplierManagementPage() {
   const { user, profile } = useAuth();
@@ -19,6 +35,11 @@ export default function SupplierManagementPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [currentSupplier, setCurrentSupplier] = useState<Supplier | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  
   const [newSupplier, setNewSupplier] = useState({
     name: "",
     contactPerson: "",
@@ -49,6 +70,28 @@ export default function SupplierManagementPage() {
     }
   };
 
+  // Filter suppliers based on search
+  const filteredSuppliers = useMemo(() => {
+    return suppliers.filter((supplier) => {
+      const searchLower = searchQuery.toLowerCase();
+      return (
+        supplier.name.toLowerCase().includes(searchLower) ||
+        supplier.contactPerson.toLowerCase().includes(searchLower) ||
+        supplier.phone.toLowerCase().includes(searchLower) ||
+        supplier.email?.toLowerCase().includes(searchLower) ||
+        supplier.address.toLowerCase().includes(searchLower) ||
+        supplier.categories?.some(cat => cat.toLowerCase().includes(searchLower))
+      );
+    });
+  }, [suppliers, searchQuery]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredSuppliers.length / ITEMS_PER_PAGE);
+  const paginatedSuppliers = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredSuppliers.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredSuppliers, currentPage]);
+
   const handleCreateSupplier = async () => {
     try {
       await supplierManagement.createSupplier({
@@ -68,6 +111,31 @@ export default function SupplierManagementPage() {
         leadTime: 7
       });
       loadData();
+      toast.success("Supplier created successfully");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleEditSupplier = async () => {
+    if (!currentSupplier?.id) return;
+    try {
+      await supplierManagement.updateSupplier(currentSupplier.id, currentSupplier);
+      setIsEditOpen(false);
+      setCurrentSupplier(null);
+      loadData();
+      toast.success("Supplier updated successfully");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleDeleteSupplier = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this supplier?")) return;
+    try {
+      await supplierManagement.deleteSupplier(id);
+      loadData();
+      toast.success("Supplier deleted successfully");
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -99,7 +167,7 @@ export default function SupplierManagementPage() {
         </Button>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Summary Cards */}
         <div className="grid grid-cols-4 gap-4 mb-8">
           <Card className="border-0 shadow-none bg-gray-50">
@@ -128,124 +196,305 @@ export default function SupplierManagementPage() {
           </Card>
         </div>
 
-        {/* Suppliers List */}
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search suppliers by name, contact, phone, email..."
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Suppliers Table */}
         <Card className="border-0 shadow-none bg-gray-50">
           <CardContent className="p-6">
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-6">Suppliers</h3>
+            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-6">
+              Suppliers ({filteredSuppliers.length} found)
+            </h3>
+            
             {loading ? (
               <div className="h-32 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin" />
               </div>
-            ) : suppliers.length === 0 ? (
+            ) : filteredSuppliers.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Truck className="h-12 w-12 mx-auto mb-4" />
-                <p>No suppliers yet</p>
+                <p>No suppliers found</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {suppliers.map((supplier) => (
-                  <Card key={supplier.id} className="bg-white border-0 shadow-sm">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold">{supplier.name}</h3>
-                          <p className="text-sm text-gray-400">{supplier.contactPerson}</p>
-                        </div>
-                        <div className="flex gap-0.5">
-                          {[...Array(supplier.rating)].map((_, i) => (
-                            <Star key={i} className="h-3 w-3 fill-gray-400 text-gray-400" />
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-1 text-sm text-gray-500">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-3 w-3" />
-                          <span>{supplier.phone}</span>
-                        </div>
-                        {supplier.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3" />
-                            <span>{supplier.email}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-3 w-3" />
-                          <span className="truncate">{supplier.address}</span>
-                        </div>
-                      </div>
+              <>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-b-2 border-gray-200">
+                        <TableHead className="font-semibold text-gray-500 uppercase text-xs">Supplier</TableHead>
+                        <TableHead className="font-semibold text-gray-500 uppercase text-xs">Contact</TableHead>
+                        <TableHead className="font-semibold text-gray-500 uppercase text-xs">Phone</TableHead>
+                        <TableHead className="font-semibold text-gray-500 uppercase text-xs">Email</TableHead>
+                        <TableHead className="font-semibold text-gray-500 uppercase text-xs">Address</TableHead>
+                        <TableHead className="font-semibold text-gray-500 uppercase text-xs">Rating</TableHead>
+                        <TableHead className="font-semibold text-gray-500 uppercase text-xs">Terms</TableHead>
+                        <TableHead className="text-right font-semibold text-gray-500 uppercase text-xs">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedSuppliers.map((supplier) => (
+                        <TableRow key={supplier.id} className="hover:bg-white/50 border-b border-gray-100">
+                          <TableCell className="font-medium">{supplier.name}</TableCell>
+                          <TableCell className="text-sm text-gray-500">{supplier.contactPerson}</TableCell>
+                          <TableCell className="text-sm">
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3 text-gray-400" />
+                              {supplier.phone}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {supplier.email && (
+                              <div className="flex items-center gap-1">
+                                <Mail className="h-3 w-3 text-gray-400" />
+                                <span className="truncate max-w-[150px]">{supplier.email}</span>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-gray-400" />
+                              <span className="truncate max-w-[200px]">{supplier.address}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-0.5">
+                              {[...Array(supplier.rating || 0)].map((_, i) => (
+                                <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <Badge variant="secondary" className="text-xs">
+                              {supplier.paymentTerms} • {supplier.leadTime}d
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-1 justify-end">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  setCurrentSupplier(supplier);
+                                  setIsEditOpen(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-500 hover:text-red-600"
+                                onClick={() => supplier.id && handleDeleteSupplier(supplier.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
 
-                      <div className="mt-3 pt-3 border-t flex justify-between text-xs text-gray-400">
-                        <span>{supplier.paymentTerms}</span>
-                        <span>{supplier.leadTime} days lead</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                    <p className="text-sm text-gray-500">
+                      Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredSuppliers.length)} of {filteredSuppliers.length} suppliers
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm text-gray-600">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
 
-        {/* Add Supplier Modal */}
-        {isAddOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-              <h2 className="text-xl font-bold mb-4">Add New Supplier</h2>
-              <div className="space-y-4">
+        {/* Add Supplier Dialog */}
+        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add New Supplier</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div>
+                <Label>Company Name *</Label>
+                <Input
+                  value={newSupplier.name}
+                  onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
+                  placeholder="Enter company name"
+                />
+              </div>
+              <div>
+                <Label>Contact Person *</Label>
+                <Input
+                  value={newSupplier.contactPerson}
+                  onChange={(e) => setNewSupplier({ ...newSupplier, contactPerson: e.target.value })}
+                  placeholder="Enter contact person"
+                />
+              </div>
+              <div>
+                <Label>Phone *</Label>
+                <Input
+                  value={newSupplier.phone}
+                  onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
+                  placeholder="Enter phone number"
+                />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={newSupplier.email}
+                  onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
+                  placeholder="Enter email address"
+                />
+              </div>
+              <div>
+                <Label>Address *</Label>
+                <Input
+                  value={newSupplier.address}
+                  onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })}
+                  placeholder="Enter address"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Payment Terms</Label>
+                  <Input
+                    value={newSupplier.paymentTerms}
+                    onChange={(e) => setNewSupplier({ ...newSupplier, paymentTerms: e.target.value })}
+                    placeholder="e.g., Net 30"
+                  />
+                </div>
+                <div>
+                  <Label>Lead Time (days)</Label>
+                  <Input
+                    type="number"
+                    value={newSupplier.leadTime}
+                    onChange={(e) => setNewSupplier({ ...newSupplier, leadTime: parseInt(e.target.value) })}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" className="flex-1" onClick={() => setIsAddOpen(false)}>
+                  Cancel
+                </Button>
+                <Button className="flex-1 bg-black hover:bg-gray-800" onClick={handleCreateSupplier}>
+                  Create Supplier
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Supplier Dialog */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Supplier</DialogTitle>
+            </DialogHeader>
+            {currentSupplier && (
+              <div className="space-y-4 pt-4">
                 <div>
                   <Label>Company Name *</Label>
                   <Input
-                    value={newSupplier.name}
-                    onChange={(e) => setNewSupplier({...newSupplier, name: e.target.value})}
-                    placeholder="Supplier name"
+                    value={currentSupplier.name}
+                    onChange={(e) => setCurrentSupplier({ ...currentSupplier, name: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label>Contact Person *</Label>
                   <Input
-                    value={newSupplier.contactPerson}
-                    onChange={(e) => setNewSupplier({...newSupplier, contactPerson: e.target.value})}
-                    placeholder="Contact person name"
+                    value={currentSupplier.contactPerson}
+                    onChange={(e) => setCurrentSupplier({ ...currentSupplier, contactPerson: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label>Phone *</Label>
                   <Input
-                    value={newSupplier.phone}
-                    onChange={(e) => setNewSupplier({...newSupplier, phone: e.target.value})}
-                    placeholder="Phone number"
+                    value={currentSupplier.phone}
+                    onChange={(e) => setCurrentSupplier({ ...currentSupplier, phone: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label>Email</Label>
                   <Input
                     type="email"
-                    value={newSupplier.email}
-                    onChange={(e) => setNewSupplier({...newSupplier, email: e.target.value})}
-                    placeholder="Email address"
+                    value={currentSupplier.email || ""}
+                    onChange={(e) => setCurrentSupplier({ ...currentSupplier, email: e.target.value })}
                   />
                 </div>
                 <div>
-                  <Label>Address</Label>
+                  <Label>Address *</Label>
                   <Input
-                    value={newSupplier.address}
-                    onChange={(e) => setNewSupplier({...newSupplier, address: e.target.value})}
-                    placeholder="Full address"
+                    value={currentSupplier.address}
+                    onChange={(e) => setCurrentSupplier({ ...currentSupplier, address: e.target.value })}
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Payment Terms</Label>
+                    <Input
+                      value={currentSupplier.paymentTerms}
+                      onChange={(e) => setCurrentSupplier({ ...currentSupplier, paymentTerms: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Lead Time (days)</Label>
+                    <Input
+                      type="number"
+                      value={currentSupplier.leadTime}
+                      onChange={(e) => setCurrentSupplier({ ...currentSupplier, leadTime: parseInt(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <Button variant="outline" className="flex-1" onClick={() => setIsEditOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button className="flex-1 bg-black hover:bg-gray-800" onClick={handleEditSupplier}>
+                    Save Changes
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-3 mt-6">
-                <Button variant="outline" className="flex-1" onClick={() => setIsAddOpen(false)}>
-                  Cancel
-                </Button>
-                <Button className="flex-1 bg-indigo-600" onClick={handleCreateSupplier}>
-                  Add Supplier
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
