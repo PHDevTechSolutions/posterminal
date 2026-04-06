@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Package, ShoppingCart, Search, Loader2 } from "lucide-react";
 import { useState } from "react";
+import Image from "next/image";
 
 export default function ProductsPage() {
   const { menuItems, loading: itemsLoading, addToCart } = useShop();
@@ -86,44 +87,58 @@ export default function ProductsPage() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredItems.map((item) => (
-            <Card key={item.id} className="border-0 shadow-sm bg-gray-50">
-              <CardContent className="p-4">
+            <Card key={item.id} className="border-0 shadow-sm bg-gray-50 overflow-hidden">
+              <CardContent className="p-0">
                 <div 
-                  className="aspect-square rounded-lg mb-3 flex items-center justify-center"
+                  className="aspect-square relative overflow-hidden"
                   style={{ backgroundColor: brand.colors.surface }}
                 >
-                  <Package className="h-8 w-8" style={{ color: brand.colors.secondary }} />
-                </div>
-                <Badge 
-                  variant="secondary" 
-                  className="mb-2 text-xs"
-                  style={{ backgroundColor: brand.colors.primary + '10', color: brand.colors.primary }}
-                >
-                  {item.category}
-                </Badge>
-                <h3 className="font-medium text-sm mb-1 line-clamp-1" style={{ color: brand.colors.primary }}>
-                  {item.name}
-                </h3>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold" style={{ color: brand.colors.primary }}>₱{item.price}</span>
-                  {products.showStockCount && (
-                    <span className="text-xs text-gray-400">
-                      {item.stock <= products.lowStockThreshold 
-                        ? products.lowStockMessage.replace('{count}', item.stock.toString())
-                        : `${item.stock} left`
-                      }
-                    </span>
+                  {item.image ? (
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="h-12 w-12" style={{ color: brand.colors.secondary }} />
+                    </div>
                   )}
                 </div>
-                <Button
-                  size="sm"
-                  className="w-full mt-3 hover:opacity-90"
-                  style={{ backgroundColor: brand.colors.primary }}
-                  onClick={() => addToCart(item)}
-                >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  {products.addToCartButton}
-                </Button>
+                <div className="p-4">
+                  <Badge 
+                    variant="secondary" 
+                    className="mb-2 text-xs"
+                    style={{ backgroundColor: brand.colors.primary + '10', color: brand.colors.primary }}
+                  >
+                    {item.category}
+                  </Badge>
+                  <h3 className="font-medium text-sm mb-1 line-clamp-1" style={{ color: brand.colors.primary }}>
+                    {item.name}
+                  </h3>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold" style={{ color: brand.colors.primary }}>₱{item.price}</span>
+                    {products.showStockCount && (
+                      <span className="text-xs text-gray-400">
+                        {item.stock <= products.lowStockThreshold 
+                          ? products.lowStockMessage.replace('{count}', item.stock.toString())
+                          : `${item.stock} left`
+                        }
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full mt-3 hover:opacity-90"
+                    style={{ backgroundColor: brand.colors.primary }}
+                    onClick={() => addToCart(item)}
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    {products.addToCartButton}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}

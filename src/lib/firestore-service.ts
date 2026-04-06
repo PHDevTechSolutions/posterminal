@@ -40,6 +40,11 @@ export const deleteCategory = async (id: string, name: string) => {
   await logAction("DELETE_CATEGORY", `Deleted category: ${name}`);
 };
 
+export const deleteMenuItem = async (id: string, name: string) => {
+  await deleteDoc(doc(db, MENU_COLLECTION, id));
+  await logAction("DELETE_MENU_ITEM", `Deleted menu item: ${name}`);
+};
+
 // --- Menu Service ---Management
 export const getAllUsers = async (): Promise<UserProfile[]> => {
   try {

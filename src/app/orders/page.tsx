@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Order } from "@/types";
-import { subscribeToOrders, updateOrderStatus } from "@/lib/firestore-service";
+import { subscribeToOrders, updateOrderStatus, voidOrder } from "@/lib/firestore-service";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -46,6 +46,17 @@ export default function OrdersPage() {
       toast.success(`Order status updated to ${newStatus}`);
     } catch (error) {
       toast.error("Failed to update order status");
+    }
+  };
+
+  const handleVoidOrder = async (orderId: string, orderNumber: string) => {
+    if (!confirm(`Void Order #${orderNumber}? This will return all items to stock.`)) return;
+    
+    try {
+      await voidOrder(orderId);
+      toast.success(`Order #${orderNumber} voided successfully`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to void order");
     }
   };
 
@@ -150,6 +161,13 @@ export default function OrdersPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-6 pt-0 gap-3">
+                  <Button 
+                    variant="outline"
+                    className="h-12 rounded-2xl text-red-600 border-red-200 hover:bg-red-50 font-black text-xs uppercase tracking-widest"
+                    onClick={() => handleVoidOrder(order.id!, order.id?.slice(-6).toUpperCase() || 'UNKNOWN')}
+                  >
+                    VOID ORDER
+                  </Button>
                   {order.status === 'pending' ? (
                     <Button 
                       className="flex-1 h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 font-black text-xs uppercase tracking-widest shadow-lg shadow-amber-100"

@@ -70,9 +70,9 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // SETTINGS: Admin only for shop config
+    // SETTINGS: Public read for shop config, Admin only for write
     match /settings/{document=**} {
-      allow read: if isAuthenticated();
+      allow read: if true;  // Public access for shop display
       allow write: if isAdmin();
     }
 
@@ -171,3 +171,5 @@ service cloud.firestore {
       allow create: if true; // Customers can create (public)
       allow update: if isAdmin(); // Only staff can update (mark as read)
     }
+  }
+}

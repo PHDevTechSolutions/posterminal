@@ -729,19 +729,31 @@ export default function POSPage() {
                 {filteredItems.map((item) => (
                   <Card 
                     key={item.id} 
-                    className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
                     onClick={() => addToCart(item)}
                   >
-                    <CardContent className="p-4">
-                      <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                        <Package className="h-8 w-8 text-gray-300" />
+                    <CardContent className="p-0">
+                      <div className="aspect-square bg-gray-100 relative overflow-hidden">
+                        {item.image ? (
+                          <img 
+                            src={item.image} 
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="h-8 w-8 text-gray-300" />
+                          </div>
+                        )}
                       </div>
-                      <h3 className="font-medium text-sm text-gray-900 line-clamp-1">{item.name}</h3>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="font-semibold">₱{item.price}</span>
-                        <Badge variant={item.stock > 10 ? "secondary" : "destructive"} className="text-xs">
-                          {item.stock}
-                        </Badge>
+                      <div className="p-4">
+                        <h3 className="font-medium text-sm text-gray-900 line-clamp-1">{item.name}</h3>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="font-semibold">₱{item.price}</span>
+                          <Badge variant={item.stock > 10 ? "secondary" : "destructive"} className="text-xs">
+                            {item.stock}
+                          </Badge>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

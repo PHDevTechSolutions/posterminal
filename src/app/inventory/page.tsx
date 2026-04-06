@@ -48,7 +48,8 @@ import {
   updateMenuItem, 
   getCategories, 
   addCategory, 
-  deleteCategory 
+  deleteCategory,
+  deleteMenuItem
 } from "@/lib/firestore-service";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { toast } from "sonner";
@@ -164,6 +165,18 @@ export default function InventoryPage() {
       toast.success("Category deleted");
     } catch (error) {
       toast.error("Failed to delete category");
+    }
+  };
+
+  const handleDeleteItem = async (id: string, name: string) => {
+    if (!confirm(`Delete item "${name}"? This action cannot be undone.`)) return;
+    try {
+      await deleteMenuItem(id, name);
+      const updatedItems = await getMenuItems();
+      setItems(updatedItems);
+      toast.success("Item deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete item");
     }
   };
 
@@ -499,17 +512,27 @@ export default function InventoryPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-10 w-10 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl"
-                          onClick={() => {
-                            setCurrentItem(item);
-                            setIsEditOpen(true);
-                          }}
-                        >
-                          <Edit className="h-5 w-5" />
-                        </Button>
+                        <div className="flex gap-2 justify-end">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-10 w-10 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl"
+                            onClick={() => {
+                              setCurrentItem(item);
+                              setIsEditOpen(true);
+                            }}
+                          >
+                            <Edit className="h-5 w-5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-10 w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl"
+                            onClick={() => handleDeleteItem(item.id, item.name)}
+                          >
+                            <X className="h-5 w-5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -536,17 +559,27 @@ export default function InventoryPage() {
                         {item.category}
                       </Badge>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-10 w-10 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl"
-                      onClick={() => {
-                        setCurrentItem(item);
-                        setIsEditOpen(true);
-                      }}
-                    >
-                      <Edit className="h-5 w-5" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-10 w-10 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl"
+                        onClick={() => {
+                          setCurrentItem(item);
+                          setIsEditOpen(true);
+                        }}
+                      >
+                        <Edit className="h-5 w-5" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-10 w-10 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl"
+                        onClick={() => handleDeleteItem(item.id, item.name)}
+                      >
+                        <X className="h-5 w-5" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="bg-white p-2 rounded-xl border-none shadow-sm flex flex-col items-center">
