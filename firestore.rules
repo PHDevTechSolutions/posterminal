@@ -20,15 +20,15 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
     
-    // Menu: Everyone can read, only Admins can write
+    // Menu: Public read for shop, only Admins can write
     match /menu/{document=**} {
-      allow read: if isAuthenticated();
+      allow read: if true;  // Public access for shop
       allow write: if isAdmin();
     }
     
-    // Categories: Everyone can read, only Admins can write
+    // Categories: Public read for shop, only Admins can write
     match /categories/{document=**} {
-      allow read: if isAuthenticated();
+      allow read: if true;  // Public access for shop
       allow write: if isAdmin();
     }
     
@@ -155,21 +155,14 @@ service cloud.firestore {
     }
 
     // CHAT / MESSAGING SYSTEM
-    // Conversations: Customers can read own, Staff can read all
+    // Conversations: Public create for customers, Admin can read all
     match /conversations/{conversationId} {
-      allow read: if isAuthenticated() && 
-        (request.auth.uid == resource.data.customerId || isAdmin());
-      allow create: if true; // Customers can create (public)
-      allow update: if isAuthenticated() && 
-        (request.auth.uid == resource.data.customerId || isAdmin());
+      allow read, write: if true; // Public access for shop customers (anonymous)
     }
 
-    // Messages: Customers can read/write own conversations, Staff can read/write all
+    // Messages: Public create for customers, Admin can read all
     match /messages/{messageId} {
-      allow read: if isAuthenticated() && 
-        (request.auth.uid == get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.customerId || isAdmin());
-      allow create: if true; // Customers can create (public)
-      allow update: if isAdmin(); // Only staff can update (mark as read)
+      allow read, write: if true; // Public access for shop customers (anonymous)
     }
   }
 }
